@@ -11,10 +11,4 @@ module.exports = {
   resolve: {
     extensions: [".js", ".ts", ".jsx", ".tsx", ".css", ".json"],
   },
-  externals: {
-    opusscript: "commonjs2 opusscript",
-    "prism-media": "commonjs2 prism-media",
-    "@snazzah/davey": "commonjs2 @snazzah/davey",
-    "zlib-sync": "commonjs2 zlib-sync",
-  },
 };

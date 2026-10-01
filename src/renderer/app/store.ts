@@ -5,7 +5,10 @@ import outputReducer, {
   LOCAL_OUTPUT_ID,
   OutputState,
 } from "../features/output/outputSlice";
-import settingsReducer from "../features/settings/settingsSlice";
+import settingsReducer, {
+  DEFAULT_FLUXER_INSTANCE,
+  SettingsState,
+} from "../features/settings/settingsSlice";
 import bookmarksReducer from "../features/bookmarks/bookmarksSlice";
 import tabsReducer from "../features/tabs/tabsSlice";
 import playerReducer from "../features/player/playerSlice";
@@ -52,19 +55,22 @@ const migrations: any = {
       },
     };
   },
-  // v1.1 - Add performance mode
-  3: (state: RootState): RootState => {
+  // Fluxer replaces Discord, so the Discord token no longer applies
+  5: (state: RootState): RootState => {
+    const settings: Record<string, unknown> = { ...state.settings };
+    delete settings.discordToken;
     return {
       ...state,
       settings: {
-        ...state.settings,
-        streamingMode: "performance",
+        ...(settings as unknown as SettingsState),
+        fluxerInstance: DEFAULT_FLUXER_INSTANCE,
+        fluxerToken: "",
       },
     };
   },
 };
 
-// Only remember outputs on this computer; Discord channels need a live connection
+// Only remember outputs on this computer; voice channels need a live connection
 const outputTransform = createTransform(
   (state: OutputState) => ({ outputs: state.outputs.filter(isLocalOutput) }),
   (state: { outputs: string[] }): OutputState => {
@@ -79,7 +85,7 @@ const outputTransform = createTransform(
 
 const persistConfig: PersistConfig<ReturnType<typeof rootReducer>> = {
   key: "root",
-  version: 4,
+  version: 5,
   storage,
   whitelist: ["bookmarks", "settings", "output"],
   transforms: [outputTransform],

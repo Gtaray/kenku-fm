@@ -1,10 +1,12 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "ready";
-export type StreamingMode = "lowLatency" | "performance";
+
+export const DEFAULT_FLUXER_INSTANCE = "https://fluxer.app";
 
 export interface SettingsState {
-  discordToken: string;
+  fluxerInstance: string;
+  fluxerToken: string;
   urlBarEnabled: boolean;
   remoteEnabled: boolean;
   remoteAddress: string;
@@ -12,11 +14,11 @@ export interface SettingsState {
   externalInputsEnabled: boolean;
   multipleInputsEnabled: boolean;
   multipleOutputsEnabled: boolean;
-  streamingMode: StreamingMode;
 }
 
 const initialState: SettingsState = {
-  discordToken: "",
+  fluxerInstance: DEFAULT_FLUXER_INSTANCE,
+  fluxerToken: "",
   urlBarEnabled: true,
   remoteEnabled: false,
   remoteAddress: "127.0.0.1",
@@ -24,15 +26,17 @@ const initialState: SettingsState = {
   externalInputsEnabled: false,
   multipleInputsEnabled: false,
   multipleOutputsEnabled: false,
-  streamingMode: "performance",
 };
 
 export const connectionSlice = createSlice({
   name: "settings",
   initialState,
   reducers: {
-    setDiscordToken: (state, action: PayloadAction<string>) => {
-      state.discordToken = action.payload;
+    setFluxerInstance: (state, action: PayloadAction<string>) => {
+      state.fluxerInstance = action.payload;
+    },
+    setFluxerToken: (state, action: PayloadAction<string>) => {
+      state.fluxerToken = action.payload;
     },
     setURLBarEnabled: (state, action: PayloadAction<boolean>) => {
       state.urlBarEnabled = action.payload;
@@ -55,14 +59,12 @@ export const connectionSlice = createSlice({
     setMultipleOutputsEnabled: (state, action: PayloadAction<boolean>) => {
       state.multipleOutputsEnabled = action.payload;
     },
-    setStreamingMode: (state, action: PayloadAction<StreamingMode>) => {
-      state.streamingMode = action.payload;
-    },
   },
 });
 
 export const {
-  setDiscordToken,
+  setFluxerInstance,
+  setFluxerToken,
   setURLBarEnabled,
   setRemoteEnabled,
   setRemoteAddress,
@@ -70,7 +72,6 @@ export const {
   setExternalInputsEnabled,
   setMultipleInputsEnabled,
   setMultipleOutputsEnabled,
-  setStreamingMode,
 } = connectionSlice.actions;
 
 export default connectionSlice.reducer;

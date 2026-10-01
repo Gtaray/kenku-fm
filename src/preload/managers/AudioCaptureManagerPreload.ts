@@ -1,32 +1,7 @@
-import { ipcRenderer } from "electron";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import PCMStream from "./PCMStream.worklet";
 import { VIRTUAL_MIC_SINK_LABEL } from "../../types/pipewire";
 
 /** Sample rate of the audio context */
 const SAMPLE_RATE = 48000;
-/** Number of channels for the audio context */
-const NUM_CHANNELS = 2;
-/** 16 bit audio data */
-const BIT_DEPTH = 16;
-/** Number of bytes per audio sample */
-const BYTES_PER_SAMPLE = BIT_DEPTH / 8;
-/** 20ms Opus frame duration */
-const FRAME_DURATION = 20;
-/** Duration of each audio frame in seconds */
-const FRAME_DURATION_SECONDS = FRAME_DURATION / 1000;
-/**
- * Size in bytes of each frame of audio
- * We stream audio to the main context as 16bit PCM data
- * At 48KHz with a frame duration of 20ms (or 0.02s) and a stereo signal
- * our `frameSize` is calculated by:
- * `SAMPLE_RATE * FRAME_DURATION_SECONDS * NUM_CHANNELS / BYTES_PER_SAMPLE`
- * or:
- * `48000 * 0.02 * 2 / 2 = 960`
- */
-const FRAME_SIZE =
-  (SAMPLE_RATE * FRAME_DURATION_SECONDS * NUM_CHANNELS) / BYTES_PER_SAMPLE;
 
 /**
  * Manager to capture audio from browser views and external audio devices
@@ -44,6 +19,12 @@ export class AudioCaptureManagerPreload {
   _loopback = true;
 
   _mediaDestination?: MediaStreamAudioDestinationNode;
+  _resolveMixTrack?: (track: MediaStreamTrack) => void;
+  /** The mixed output as a track, published to Fluxer voice rooms */
+  _mixTrack = new Promise<MediaStreamTrack>((resolve) => {
+    this._resolveMixTrack = resolve;
+  });
+
   /** Audio DOM element playing into the PipeWire virtual mic (Linux only) */
   _virtualMicElement?: HTMLAudioElement;
   _virtualMicSinkId?: string;
@@ -56,13 +37,8 @@ export class AudioCaptureManagerPreload {
   _externalAudioStreams: Record<string, MediaStream> = {};
   _externalAudioStreamOutputs: Record<string, GainNode> = {};
 
-  _ws?: WebSocket;
-
-  /**
-   * Create the Audio Context, setup the communication socket and start the
-   * internal PCM stream for communicating between the renderer and main context
-   */
-  async start(streamingMode: "lowLatency" | "performance"): Promise<void> {
+  /** Create the Audio Context that mixes every source into one output */
+  async start(): Promise<void> {
     this._audioContext = new AudioContext({
       // Setting the latency hint to `playback` fixes audio glitches on some Windows 11 machines.
       latencyHint: "playback",
@@ -70,38 +46,11 @@ export class AudioCaptureManagerPreload {
     });
     this._audioOutputNode = this._audioContext.createGain();
 
-    await this._setupWebsocket();
     await this._setupLoopback();
+  }
 
-    ipcRenderer.send(
-      "AUDIO_CAPTURE_STREAM_START",
-      NUM_CHANNELS,
-      FRAME_SIZE,
-      SAMPLE_RATE
-    );
-
-    // Create PCM stream node
-    await this._audioContext.audioWorklet.addModule(PCMStream);
-    const pcmStreamNode = new AudioWorkletNode(
-      this._audioContext,
-      "pcm-stream",
-      {
-        parameterData: {
-          // Set performance buffer size to 1 second (0.02 * 50)
-          // and lowLatency buffer size to 20ms (0.02)
-          bufferSize:
-            streamingMode === "performance" ? FRAME_SIZE * 50 : FRAME_SIZE,
-        },
-      }
-    );
-    pcmStreamNode.port.onmessage = (event) => {
-      if (this._ws && this._ws.readyState === WebSocket.OPEN) {
-        this._ws.send(event.data);
-      }
-    };
-
-    // Pipe the audio output into the stream
-    this._audioOutputNode.connect(pcmStreamNode);
+  getMixTrack(): Promise<MediaStreamTrack> {
+    return this._mixTrack;
   }
 
   setMuted(id: number, muted: boolean): void {
@@ -170,24 +119,12 @@ export class AudioCaptureManagerPreload {
     }
   }
 
-  async _setupWebsocket(): Promise<void> {
-    const websocketAddress = await ipcRenderer.invoke(
-      "AUDIO_CAPTURE_GET_WEBSOCKET_ADDRESS"
-    );
-    this._ws = new WebSocket(`ws://localhost:${websocketAddress.port}`);
-    this._ws.addEventListener("close", (event) => {
-      ipcRenderer.emit(
-        "ERROR",
-        null,
-        `WebSocket closed with code ${event.code}`
-      );
-    });
-  }
-
   async _setupLoopback(): Promise<void> {
     // Create loopback media element
     const mediaDestination = this._audioContext.createMediaStreamDestination();
     this._audioOutputNode.connect(mediaDestination);
+    this._mediaDestination = mediaDestination;
+    this._resolveMixTrack(mediaDestination.stream.getAudioTracks()[0]);
 
     this._audioOutputElement = document.createElement("audio");
     this._audioOutputElement.muted = !this._loopback;
@@ -197,7 +134,6 @@ export class AudioCaptureManagerPreload {
     };
 
     if (process.platform === "linux") {
-      this._mediaDestination = mediaDestination;
       this._virtualMicElement = document.createElement("audio");
       navigator.mediaDevices.addEventListener(
         "devicechange",

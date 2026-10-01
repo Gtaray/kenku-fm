@@ -17,7 +17,7 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Select, { SelectChangeEvent } from "@mui/material/Select";
+import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormHelperText from "@mui/material/FormHelperText";
 
@@ -25,7 +25,8 @@ import { RootState } from "../../app/store";
 import { useSelector, useDispatch } from "react-redux";
 import { setStatus } from "../connection/connectionSlice";
 import {
-  setDiscordToken,
+  setFluxerInstance,
+  setFluxerToken,
   setExternalInputsEnabled,
   setMultipleInputsEnabled,
   setMultipleOutputsEnabled,
@@ -33,8 +34,6 @@ import {
   setRemoteAddress,
   setRemotePort,
   setURLBarEnabled,
-  setStreamingMode,
-  StreamingMode,
 } from "./settingsSlice";
 import { showWindowControls } from "../../common/showWindowControls";
 import { useThemeState } from "../../app/KenkuThemeProvider";
@@ -49,23 +48,27 @@ export function Settings({ open, onClose }: SettingsProps) {
   const settings = useSelector((state: RootState) => state.settings);
   const dispatch = useDispatch();
 
-  function handleDiscordTokenChange(e: React.ChangeEvent<HTMLInputElement>) {
-    dispatch(setDiscordToken(e.target.value));
+  function handleFluxerInstanceChange(e: React.ChangeEvent<HTMLInputElement>) {
+    dispatch(setFluxerInstance(e.target.value));
   }
 
-  function handleDiscordConnect() {
+  function handleFluxerTokenChange(e: React.ChangeEvent<HTMLInputElement>) {
+    dispatch(setFluxerToken(e.target.value));
+  }
+
+  function handleFluxerConnect() {
     if (connection.status === "disconnected") {
       dispatch(setStatus("connecting"));
-      window.kenku.connect(settings.discordToken);
+      window.kenku.connect(settings.fluxerInstance, settings.fluxerToken);
     } else {
       window.kenku.disconnect();
     }
   }
 
   useEffect(() => {
-    if (settings.discordToken) {
+    if (settings.fluxerToken) {
       dispatch(setStatus("connecting"));
-      window.kenku.connect(settings.discordToken);
+      window.kenku.connect(settings.fluxerInstance, settings.fluxerToken);
     }
 
     return () => {
@@ -74,21 +77,37 @@ export function Settings({ open, onClose }: SettingsProps) {
   }, []);
 
   useEffect(() => {
-    window.kenku.on("DISCORD_READY", () => {
+    window.kenku.on("FLUXER_READY", () => {
       dispatch(setStatus("ready"));
     });
-    window.kenku.on("DISCORD_DISCONNECTED", () => {
+    window.kenku.on("FLUXER_DISCONNECTED", () => {
       dispatch(setStatus("disconnected"));
     });
 
     return () => {
-      window.kenku.removeAllListeners("DISCORD_READY");
-      window.kenku.removeAllListeners("DISCORD_DISCONNECTED");
+      window.kenku.removeAllListeners("FLUXER_READY");
+      window.kenku.removeAllListeners("FLUXER_DISCONNECTED");
     };
   }, [dispatch]);
 
-  const discordSettings = (
+  const fluxerSettings = (
     <Stack spacing={1}>
+      <TextField
+        margin="dense"
+        size="small"
+        id="fluxer-instance"
+        label="Instance"
+        fullWidth
+        variant="standard"
+        autoComplete="off"
+        InputLabelProps={{
+          shrink: true,
+        }}
+        value={settings.fluxerInstance}
+        onChange={handleFluxerInstanceChange}
+        disabled={connection.status !== "disconnected"}
+        helperText="Your Fluxer server's address"
+      />
       <TextField
         autoFocus
         margin="dense"
@@ -102,14 +121,18 @@ export function Settings({ open, onClose }: SettingsProps) {
         InputLabelProps={{
           shrink: true,
         }}
-        value={settings.discordToken}
-        onChange={handleDiscordTokenChange}
+        value={settings.fluxerToken}
+        onChange={handleFluxerTokenChange}
         disabled={connection.status !== "disconnected"}
         helperText="Enter your bot's token"
       />
       <Button
-        disabled={connection.status === "connecting" || !settings.discordToken}
-        onClick={handleDiscordConnect}
+        disabled={
+          connection.status === "connecting" ||
+          !settings.fluxerToken ||
+          !settings.fluxerInstance
+        }
+        onClick={handleFluxerConnect}
         fullWidth
         variant="outlined"
         size="small"
@@ -123,7 +146,7 @@ export function Settings({ open, onClose }: SettingsProps) {
         )}
       </Button>
       <Link
-        href="https://kenku.fm/docs/getting-a-discord-token"
+        href="https://docs.fluxer.app/http-api/applications/"
         variant="caption"
         textAlign="center"
         target="_blank"
@@ -225,36 +248,9 @@ export function Settings({ open, onClose }: SettingsProps) {
     </Stack>
   );
 
-  const [streamingModeChanged, setStreamingModeChanged] = useState(false);
-
-  function handleStreamingModeChnage(event: SelectChangeEvent) {
-    dispatch(setStreamingMode(event.target.value as StreamingMode));
-    setStreamingModeChanged(true);
-  }
-
   useEffect(() => {
-    window.kenku.startAudioCapture(settings.streamingMode);
+    window.kenku.startAudioCapture();
   }, []);
-
-  const streamingSettings = (
-    <FormControl fullWidth variant="standard" margin="dense">
-      <InputLabel id="streaming-mode-select-label">Mode</InputLabel>
-      <Select
-        labelId="streaming-mode-select-label"
-        label="Mode"
-        value={settings.streamingMode}
-        onChange={handleStreamingModeChnage}
-      >
-        <MenuItem value="lowLatency">Low Latency</MenuItem>
-        <MenuItem value="performance">Performance</MenuItem>
-      </Select>
-      {streamingModeChanged && (
-        <FormHelperText sx={{ color: "primary.main" }}>
-          * Restart to apply change
-        </FormHelperText>
-      )}
-    </FormControl>
-  );
 
   const themeState = useThemeState();
   const selectedTheme = themeState.themes.find(
@@ -400,14 +396,11 @@ export function Settings({ open, onClose }: SettingsProps) {
         Settings
       </DialogTitle>
       <DialogContent>
-        <DialogContentText>Discord</DialogContentText>
-        {discordSettings}
+        <DialogContentText>Fluxer</DialogContentText>
+        {fluxerSettings}
         <Divider sx={{ mb: 2 }} />
         <DialogContentText>Remote</DialogContentText>
         {remoteSettings}
-        <Divider sx={{ mb: 2 }} />
-        <DialogContentText>Streaming</DialogContentText>
-        {streamingSettings}
         <Divider sx={{ mb: 2 }} />
         <DialogContentText>Theme</DialogContentText>
         {themeSettings}

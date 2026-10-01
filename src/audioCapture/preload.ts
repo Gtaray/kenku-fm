@@ -1,8 +1,40 @@
 import { ipcRenderer } from "electron";
 
 import { AudioCaptureManagerPreload } from "../preload/managers/AudioCaptureManagerPreload";
+import { VoiceRoomManagerPreload } from "../preload/managers/VoiceRoomManagerPreload";
 
 const audioCaptureManager = new AudioCaptureManagerPreload();
+const voiceRoomManager = new VoiceRoomManagerPreload(
+  () => audioCaptureManager.getMixTrack(),
+  (connectionId, state, message) => {
+    ipcRenderer.send(
+      "AUDIO_CAPTURE_VOICE_ROOM_STATE",
+      connectionId,
+      state,
+      message
+    );
+  }
+);
+
+ipcRenderer.on(
+  "AUDIO_CAPTURE_VOICE_ROOM_CONNECT",
+  (
+    _,
+    connectionId: string,
+    endpoint: string,
+    token: string,
+    bitrate?: number
+  ) => {
+    voiceRoomManager.connect(connectionId, endpoint, token, bitrate);
+  }
+);
+
+ipcRenderer.on(
+  "AUDIO_CAPTURE_VOICE_ROOM_DISCONNECT",
+  (_, connectionId: string) => {
+    voiceRoomManager.disconnect(connectionId);
+  }
+);
 
 ipcRenderer.on(
   "AUDIO_CAPTURE_START_BROWSER_VIEW_STREAM",
@@ -47,9 +79,6 @@ ipcRenderer.on(
   }
 );
 
-ipcRenderer.on(
-  "AUDIO_CAPTURE_START",
-  (_, streamingMode: "lowLatency" | "performance") => {
-    audioCaptureManager.start(streamingMode);
-  }
-);
+ipcRenderer.on("AUDIO_CAPTURE_START", () => {
+  audioCaptureManager.start();
+});

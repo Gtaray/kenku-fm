@@ -6,18 +6,26 @@
 
 This is an unofficial fork of [owlbear-rodeo/kenku-fm](https://github.com/owlbear-rodeo/kenku-fm). It is not affiliated with or supported by Owlbear Rodeo; please report issues with fork features here, not upstream.
 
+**This fork plays to [Fluxer](https://fluxer.app) voice channels instead of Discord.** Discord support has been removed, so anything in the upstream sections below that mentions Discord now applies to Fluxer.
+
 ### New features
 
-- **Custom colour themes.** Every `*.json` file in the theme folder (`~/.config/Kenku FM/theme/` on Linux, alongside Kenku's existing data) appears in a new **Settings → Theme** selector. Kenku recolours instantly when you switch themes or edit the selected file, in both the main window and the player.
-  - `default.json` is created on first launch with Kenku's original colours and is never overwritten, so it's a safe starting point to copy.
-  - If the selected file is missing or invalid, Kenku falls back to its original colours and switches back once the file is fixed. Invalid files are greyed out in the selector.
-  - An **Open Theme Folder** button opens the folder in your file manager.
-- **Desktop theme integration.** Because themes reload live, a tool that regenerates a theme file when your desktop palette changes (for example a [Noctalia](https://docs.noctalia.dev) template) keeps Kenku in sync with the rest of your desktop.
+- **Fluxer voice bot.** Kenku connects to Fluxer with a bot token, lists the servers and voice channels the bot can see, and plays its mix into the voice channels you pick, just as it did with Discord.
+  - In **Settings → Fluxer**, enter your server's **Instance** address (`https://fluxer.app` by default, or your own self-hosted instance) and the bot's **Token**, then press **Connect**. Kenku reconnects automatically on later launches.
+  - Choose voice channels in the sidebar's **Output** list. With **Multiple Outputs** enabled you can play to several channels at once, one per server.
+  - The bot needs **View Channel**, **Connect** and **Speak** in the voice channels it should join (permission integer `3146752` when inviting it). Without **Speak** it joins but can't be heard.
+  - Audio is sent at the voice channel's bitrate; Fluxer sends stereo only at 128 kbps and above, so raise the channel's bitrate for stereo music.
+  - The old **Settings → Streaming → Mode** option is gone; it only applied to the Discord audio pipeline.
 - **PipeWire virtual microphone (Linux only).** When `pw-loopback` is installed, Kenku creates a **Kenku FM** microphone at startup and removes it on quit. Select **Kenku FM Virtual Mic** in the Output list to play into it, then choose **Kenku FM** as the microphone in your voice chat app; no manual routing or auto-connect scripts needed.
   - Enable **Multiple Outputs** to play to **This Computer** and the virtual mic at the same time.
   - Your choice of This Computer / Virtual Mic is remembered between launches.
   - Kenku's own devices are hidden from the External Inputs list to prevent feedback loops. Ignore the **Monitor of Kenku FM Output** entry other apps show; it carries the same audio.
   - On Windows, macOS, or Linux without PipeWire, nothing changes.
+- **Custom colour themes.** Every `*.json` file in the theme folder (`~/.config/Kenku FM/theme/` on Linux, alongside Kenku's existing data) appears in a new **Settings → Theme** selector. Kenku recolours instantly when you switch themes or edit the selected file, in both the main window and the player.
+  - `default.json` is created on first launch with Kenku's original colours and is never overwritten, so it's a safe starting point to copy.
+  - If the selected file is missing or invalid, Kenku falls back to its original colours and switches back once the file is fixed. Invalid files are greyed out in the selector.
+  - An **Open Theme Folder** button opens the folder in your file manager.
+- **Desktop theme integration.** Because themes reload live, a tool that regenerates a theme file when your desktop palette changes (for example a [Noctalia](https://docs.noctalia.dev) template) keeps Kenku in sync with the rest of your desktop.
 
 ### Theme file format
 

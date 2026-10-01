@@ -20,7 +20,7 @@ export interface OutputState {
 export const LOCAL_OUTPUT_ID = "local";
 export const VIRTUAL_MIC_OUTPUT_ID = "virtual-mic";
 
-/** Outputs played by this computer, as opposed to Discord voice channels */
+/** Outputs played by this computer, as opposed to voice channels */
 export function isLocalOutput(id: string) {
   return id === LOCAL_OUTPUT_ID || id === VIRTUAL_MIC_OUTPUT_ID;
 }

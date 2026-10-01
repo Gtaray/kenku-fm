@@ -7,11 +7,6 @@ rules.push({
 });
 
 rules.push({
-  test: /\.worklet\.js$/,
-  use: { loader: "worklet-loader", options: { inline: true } },
-});
-
-rules.push({
   test: /\.worker\.js$/,
   use: { loader: "worker-loader", options: { inline: "fallback" } },
 });

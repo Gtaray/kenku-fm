@@ -1,15 +1,17 @@
 import { BrowserWindow, ipcMain, webContents } from "electron";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { Readable } from "stream";
-import { WebSocketServer, WebSocket } from "ws";
-import prism from "prism-media";
+
+import { VoiceRoomState } from "../../types/voice";
 
 declare const AUDIO_CAPTURE_WINDOW_WEBPACK_ENTRY: string;
 declare const AUDIO_CAPTURE_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 interface AudioCaptureManagerEvents {
-  streamStart: (stream: Readable) => void;
-  streamEnd: () => void;
+  voiceRoomState: (
+    connectionId: string,
+    state: VoiceRoomState,
+    message?: string
+  ) => void;
 }
 
 /**
@@ -19,8 +21,6 @@ interface AudioCaptureManagerEvents {
  */
 export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEvents> {
   _browserWindow: BrowserWindow;
-  _encoder?: prism.opus.Encoder;
-  _wss: WebSocketServer;
 
   constructor() {
     super();
@@ -39,7 +39,6 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
       show: false
     });
     this._browserWindow.webContents.loadURL(AUDIO_CAPTURE_WINDOW_WEBPACK_ENTRY);
-    this._wss = new WebSocketServer({ port: 0 });
 
     ipcMain.on("AUDIO_CAPTURE_START", this._handleStart);
     ipcMain.on("AUDIO_CAPTURE_SET_LOOPBACK", this._handleSetLoopback);
@@ -53,12 +52,7 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
       "AUDIO_CAPTURE_STOP_EXTERNAL_AUDIO_CAPTURE",
       this._handleStopExternalAudioCapture
     );
-    ipcMain.on("AUDIO_CAPTURE_STREAM_START", this._handleStreamStart);
-    ipcMain.on("AUDIO_CAPTURE_STREAM_END", this._handleStreamEnd);
-    ipcMain.handle(
-      "AUDIO_CAPTURE_GET_WEBSOCKET_ADDRESS",
-      this._handleGetWebsocketAddress
-    );
+    ipcMain.on("AUDIO_CAPTURE_VOICE_ROOM_STATE", this._handleVoiceRoomState);
     ipcMain.on(
       "AUDIO_CAPTURE_START_BROWSER_VIEW_STREAM",
       this._handleStartBrowserViewStream
@@ -67,8 +61,6 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
       "AUDIO_CAPTURE_STOP_BROWSER_VIEW_STREAM",
       this._handleStopBrowserViewStream
     );
-
-    this._wss.on("connection", this._handleWebsocketConnection);
   }
 
   destroy() {
@@ -84,9 +76,7 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
       "AUDIO_CAPTURE_STOP_EXTERNAL_AUDIO_CAPTURE",
       this._handleStopExternalAudioCapture
     );
-    ipcMain.off("AUDIO_CAPTURE_STREAM_START", this._handleStreamStart);
-    ipcMain.off("AUDIO_CAPTURE_STREAM_END", this._handleStreamEnd);
-    ipcMain.removeHandler("AUDIO_CAPTURE_GET_WEBSOCKET_ADDRESS");
+    ipcMain.off("AUDIO_CAPTURE_VOICE_ROOM_STATE", this._handleVoiceRoomState);
     ipcMain.off(
       "AUDIO_CAPTURE_START_BROWSER_VIEW_STREAM",
       this._handleStartBrowserViewStream
@@ -97,19 +87,45 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
     );
     this._browserWindow.webContents.close();
     (this._browserWindow.webContents as any).destroy();
-    this._handleStreamEnd();
-    this._wss.close();
   }
 
-  _handleWebsocketConnection = (ws: WebSocket) => {
-    ws.on("message", this._handleStreamData);
+  connectVoiceRoom(
+    connectionId: string,
+    endpoint: string,
+    token: string,
+    bitrate?: number
+  ) {
+    this._browserWindow.webContents.send(
+      "AUDIO_CAPTURE_VOICE_ROOM_CONNECT",
+      connectionId,
+      endpoint,
+      token,
+      bitrate
+    );
+  }
+
+  disconnectVoiceRoom(connectionId: string) {
+    if (!this._browserWindow.isDestroyed()) {
+      this._browserWindow.webContents.send(
+        "AUDIO_CAPTURE_VOICE_ROOM_DISCONNECT",
+        connectionId
+      );
+    }
+  }
+
+  _handleVoiceRoomState = (
+    event: Electron.IpcMainEvent,
+    connectionId: string,
+    state: VoiceRoomState,
+    message?: string
+  ) => {
+    if (event.sender === this._browserWindow.webContents) {
+      this.emit("voiceRoomState", connectionId, state, message);
+    }
   };
 
-  _handleStart = (
-    _: Electron.IpcMainEvent,
-    streamingMode: "lowLatency" | "performance"
-  ) => {
-    this._browserWindow.webContents.send("AUDIO_CAPTURE_START", streamingMode);
+  _handleStart = () => {
+    this._browserWindow.webContents.send("AUDIO_CAPTURE_START");
   };
 
   _handleSetLoopback = (_: Electron.IpcMainEvent, loopback: boolean) => {
@@ -153,40 +169,6 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
       "AUDIO_CAPTURE_STOP_EXTERNAL_AUDIO_CAPTURE",
       deviceId
     );
-  };
-
-  _handleStreamStart = (
-    _: Electron.IpcMainEvent,
-    channels: number,
-    frameSize: number,
-    sampleRate: number
-  ) => {
-    this._encoder?.end();
-
-    // Create a pipeline for converting raw PCM data into opus packets
-    const encoder = new prism.opus.Encoder({
-      channels: channels,
-      frameSize: frameSize,
-      rate: sampleRate,
-    });
-    this._encoder = encoder;
-
-    // Setup any listener streams
-    this.emit("streamStart", encoder);
-  };
-
-  _handleStreamData = async (data: Buffer) => {
-    this._encoder?.write(data);
-  };
-
-  _handleStreamEnd = () => {
-    this._encoder?.end();
-    this._encoder = undefined;
-    this.emit("streamEnd");
-  };
-
-  _handleGetWebsocketAddress = async () => {
-    return this._wss.address();
   };
 
   _handleStartBrowserViewStream = (
