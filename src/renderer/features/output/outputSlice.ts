@@ -17,9 +17,17 @@ export interface OutputState {
   outputs: string[];
 }
 
+export const LOCAL_OUTPUT_ID = "local";
+export const VIRTUAL_MIC_OUTPUT_ID = "virtual-mic";
+
+/** Outputs played by this computer, as opposed to Discord voice channels */
+export function isLocalOutput(id: string) {
+  return id === LOCAL_OUTPUT_ID || id === VIRTUAL_MIC_OUTPUT_ID;
+}
+
 const initialState: OutputState = {
   guilds: [],
-  outputs: ["local"],
+  outputs: [LOCAL_OUTPUT_ID],
 };
 
 export const outputSlice = createSlice({

@@ -29,6 +29,10 @@ ipcRenderer.on("AUDIO_CAPTURE_SET_LOOPBACK", (_, loopback: boolean) => {
   audioCaptureManager.setLoopback(loopback);
 });
 
+ipcRenderer.on("AUDIO_CAPTURE_SET_VIRTUAL_MIC", (_, enabled: boolean) => {
+  audioCaptureManager.setVirtualMic(enabled);
+});
+
 ipcRenderer.on(
   "AUDIO_CAPTURE_START_EXTERNAL_AUDIO_CAPTURE",
   (_, deviceId: string) => {

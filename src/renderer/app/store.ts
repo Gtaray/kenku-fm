@@ -1,6 +1,10 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import connectionReducer from "../features/connection/connectionSlice";
-import outputReducer from "../features/output/outputSlice";
+import outputReducer, {
+  isLocalOutput,
+  LOCAL_OUTPUT_ID,
+  OutputState,
+} from "../features/output/outputSlice";
 import settingsReducer from "../features/settings/settingsSlice";
 import bookmarksReducer from "../features/bookmarks/bookmarksSlice";
 import tabsReducer from "../features/tabs/tabsSlice";
@@ -11,6 +15,8 @@ import {
   persistStore,
   persistReducer,
   createMigrate,
+  createTransform,
+  PersistConfig,
   FLUSH,
   REHYDRATE,
   PAUSE,
@@ -58,11 +64,25 @@ const migrations: any = {
   },
 };
 
-const persistConfig = {
+// Only remember outputs on this computer; Discord channels need a live connection
+const outputTransform = createTransform(
+  (state: OutputState) => ({ outputs: state.outputs.filter(isLocalOutput) }),
+  (state: { outputs: string[] }): OutputState => {
+    const outputs = state.outputs.filter(isLocalOutput);
+    return {
+      guilds: [],
+      outputs: outputs.length > 0 ? outputs : [LOCAL_OUTPUT_ID],
+    };
+  },
+  { whitelist: ["output"] },
+);
+
+const persistConfig: PersistConfig<ReturnType<typeof rootReducer>> = {
   key: "root",
   version: 4,
   storage,
-  whitelist: ["bookmarks", "settings"],
+  whitelist: ["bookmarks", "settings", "output"],
+  transforms: [outputTransform],
   migrate: createMigrate(migrations, { debug: false }),
 };
 

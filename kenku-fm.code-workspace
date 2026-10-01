@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "kenku-fm",
+			"path": "."
+		},
+		{
+			"name": "fluxer",
+			"path": "../fluxer"
+		}
+	],
+	"settings": {}
+}

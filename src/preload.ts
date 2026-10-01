@@ -147,6 +147,9 @@ const api = {
   setLoopback: (loopback: boolean) => {
     ipcRenderer.send("AUDIO_CAPTURE_SET_LOOPBACK", loopback);
   },
+  setVirtualMic: (enabled: boolean) => {
+    ipcRenderer.send("AUDIO_CAPTURE_SET_VIRTUAL_MIC", enabled);
+  },
   setMuted: (id: number, muted: boolean) => {
     ipcRenderer.send("AUDIO_CAPTURE_SET_MUTED", id, muted);
   },

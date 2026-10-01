@@ -14,9 +14,18 @@ import ExpandMore from "@mui/icons-material/ExpandMoreRounded";
 
 import { RootState } from "../../app/store";
 import { useSelector, useDispatch } from "react-redux";
-import { addOutput, removeOutput, setGuilds, setOutput } from "./outputSlice";
+import {
+  addOutput,
+  isLocalOutput,
+  LOCAL_OUTPUT_ID,
+  removeOutput,
+  setGuilds,
+  setOutput,
+  VIRTUAL_MIC_OUTPUT_ID,
+} from "./outputSlice";
 
 import { OutputListItem } from "./OutputListItem";
+import { usePipewireAvailable } from "../../common/usePipewireAvailable";
 
 export function OutputListItems() {
   const [open, setOpen] = useState(true);
@@ -28,6 +37,12 @@ export function OutputListItems() {
   const output = useSelector((state: RootState) => state.output);
   const settings = useSelector((state: RootState) => state.settings);
   const dispatch = useDispatch();
+  const pipewireAvailable = usePipewireAvailable();
+
+  useEffect(() => {
+    window.kenku.setLoopback(output.outputs.includes(LOCAL_OUTPUT_ID));
+    window.kenku.setVirtualMic(output.outputs.includes(VIRTUAL_MIC_OUTPUT_ID));
+  }, [output.outputs]);
 
   useEffect(() => {
     window.kenku.on("DISCORD_GUILDS", (args) => {
@@ -56,17 +71,13 @@ export function OutputListItems() {
       // Already selected
       if (output.outputs.includes(channelId)) {
         dispatch(removeOutput(channelId));
-        if (channelId === "local") {
-          window.kenku.setLoopback(false);
-        } else {
+        if (!isLocalOutput(channelId)) {
           window.kenku.leaveChannel(channelId);
         }
       } else {
         // Not selected
         dispatch(addOutput(channelId));
-        if (channelId === "local") {
-          window.kenku.setLoopback(true);
-        } else {
+        if (!isLocalOutput(channelId)) {
           // Check if the channel is in the same guild as one already selected
           const channelsToGuild: Record<string, string> = {};
           for (const guild of output.guilds) {
@@ -100,18 +111,12 @@ export function OutputListItems() {
         return;
       }
 
-      if (prev) {
-        if (prev === "local") {
-          window.kenku.setLoopback(false);
-        } else {
-          // Only leave channel if selecting a different guild
-          window.kenku.leaveChannel(prev);
-        }
+      if (prev && !isLocalOutput(prev)) {
+        // Only leave channel if selecting a different guild
+        window.kenku.leaveChannel(prev);
       }
       dispatch(setOutput(channelId));
-      if (channelId === "local") {
-        window.kenku.setLoopback(true);
-      } else {
+      if (!isLocalOutput(channelId)) {
         window.kenku.joinChannel(channelId);
       }
     }
@@ -128,14 +133,28 @@ export function OutputListItems() {
       <Collapse in={open} timeout="auto" unmountOnExit>
         <List component="div" disablePadding>
           <OutputListItem
-            voiceChannel={{ id: "local", name: "This Computer" }}
-            selected={output.outputs.includes("local")}
+            voiceChannel={{ id: LOCAL_OUTPUT_ID, name: "This Computer" }}
+            selected={output.outputs.includes(LOCAL_OUTPUT_ID)}
             tick={
               settings.multipleOutputsEnabled &&
-              output.outputs.includes("local")
+              output.outputs.includes(LOCAL_OUTPUT_ID)
             }
             onClick={handleChannelChange}
           />
+          {pipewireAvailable && (
+            <OutputListItem
+              voiceChannel={{
+                id: VIRTUAL_MIC_OUTPUT_ID,
+                name: "Kenku FM Virtual Mic",
+              }}
+              selected={output.outputs.includes(VIRTUAL_MIC_OUTPUT_ID)}
+              tick={
+                settings.multipleOutputsEnabled &&
+                output.outputs.includes(VIRTUAL_MIC_OUTPUT_ID)
+              }
+              onClick={handleChannelChange}
+            />
+          )}
           <Divider variant="middle" />
           {output.guilds.map((guild) => (
             <List key={guild.id} sx={{ py: 0 }}>

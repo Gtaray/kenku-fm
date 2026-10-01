@@ -2,6 +2,7 @@ import { ipcRenderer } from "electron";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import PCMStream from "./PCMStream.worklet";
+import { VIRTUAL_MIC_SINK_LABEL } from "../../types/pipewire";
 
 /** Sample rate of the audio context */
 const SAMPLE_RATE = 48000;
@@ -40,6 +41,13 @@ export class AudioCaptureManagerPreload {
 
   /** Audio DOM element for the current output / local playback */
   _audioOutputElement?: HTMLAudioElement;
+  _loopback = true;
+
+  _mediaDestination?: MediaStreamAudioDestinationNode;
+  /** Audio DOM element playing into the PipeWire virtual mic (Linux only) */
+  _virtualMicElement?: HTMLAudioElement;
+  _virtualMicSinkId?: string;
+  _virtualMic = false;
   /** Raw media streams for each browser view containing webp/opus audio */
   _mediaStreams: Record<number, MediaStream> = {};
   _mediaStreamOutputs: Record<number, GainNode> = {};
@@ -110,7 +118,15 @@ export class AudioCaptureManagerPreload {
    * @param {boolean} loopback
    */
   setLoopback(loopback: boolean): void {
-    this._audioOutputElement.muted = !loopback;
+    this._loopback = loopback;
+    if (this._audioOutputElement) {
+      this._audioOutputElement.muted = !loopback;
+    }
+  }
+
+  setVirtualMic(enabled: boolean): void {
+    this._virtualMic = enabled;
+    this._updateVirtualMic();
   }
 
   async startExternalAudioCapture(deviceId: string): Promise<void> {
@@ -174,10 +190,56 @@ export class AudioCaptureManagerPreload {
     this._audioOutputNode.connect(mediaDestination);
 
     this._audioOutputElement = document.createElement("audio");
+    this._audioOutputElement.muted = !this._loopback;
     this._audioOutputElement.srcObject = mediaDestination.stream;
     this._audioOutputElement.onloadedmetadata = () => {
       this._audioOutputElement.play();
     };
+
+    if (process.platform === "linux") {
+      this._mediaDestination = mediaDestination;
+      this._virtualMicElement = document.createElement("audio");
+      navigator.mediaDevices.addEventListener(
+        "devicechange",
+        this._findVirtualMicSink
+      );
+      await this._findVirtualMicSink();
+    }
+  }
+
+  _findVirtualMicSink = async (): Promise<void> => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const sink = devices.find(
+      (device) =>
+        device.kind === "audiooutput" && device.label === VIRTUAL_MIC_SINK_LABEL
+    );
+    this._virtualMicSinkId = sink?.deviceId;
+    await this._updateVirtualMic();
+  };
+
+  /** Only play while the virtual mic device exists, so audio never falls back to the default speakers */
+  async _updateVirtualMic(): Promise<void> {
+    const element = this._virtualMicElement;
+    if (!element) {
+      return;
+    }
+    try {
+      if (this._virtualMic && this._virtualMicSinkId) {
+        if (element.sinkId !== this._virtualMicSinkId) {
+          await element.setSinkId(this._virtualMicSinkId);
+        }
+        if (!element.srcObject) {
+          element.srcObject = this._mediaDestination.stream;
+          await element.play();
+        }
+      } else {
+        element.pause();
+        element.srcObject = null;
+      }
+    } catch (error) {
+      console.error("Unable to route audio to the virtual mic");
+      console.error(error);
+    }
   }
 
   /**

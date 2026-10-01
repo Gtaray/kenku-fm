@@ -13,6 +13,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { addInput, removeInput, setDevices, setInput } from "./inputSlice";
 
 import { InputListItem } from "./InputListItem";
+import { VIRTUAL_MIC_INPUT_LABELS } from "../../../types/pipewire";
 
 export function InputListItems() {
   const [open, setOpen] = useState(true);
@@ -28,7 +29,11 @@ export function InputListItems() {
   useEffect(() => {
     navigator.mediaDevices.enumerateDevices().then((devices) => {
       const audioDevices = devices
-        .filter((d) => d.kind === "audioinput")
+        .filter(
+          (d) =>
+            d.kind === "audioinput" &&
+            !VIRTUAL_MIC_INPUT_LABELS.includes(d.label),
+        )
         .map((device) => ({ id: device.deviceId, label: device.label }));
       dispatch(setDevices(audioDevices));
     });

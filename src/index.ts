@@ -15,6 +15,7 @@ import { SessionManager } from "./main/managers/SessionManager";
 import { runAutoUpdate } from "./autoUpdate";
 import { getSavedBounds, saveWindowBounds } from "./bounds";
 import { ThemeManager } from "./main/theme/ThemeManager";
+import { PipewireManager } from "./main/pipewire/PipewireManager";
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -109,6 +110,7 @@ if (!hasSingleInstanceLock) {
 
   // Must exist before any window loads, as the preloads request the theme synchronously
   new ThemeManager();
+  new PipewireManager();
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.

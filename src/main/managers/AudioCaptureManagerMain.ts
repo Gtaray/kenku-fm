@@ -43,6 +43,7 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
 
     ipcMain.on("AUDIO_CAPTURE_START", this._handleStart);
     ipcMain.on("AUDIO_CAPTURE_SET_LOOPBACK", this._handleSetLoopback);
+    ipcMain.on("AUDIO_CAPTURE_SET_VIRTUAL_MIC", this._handleSetVirtualMic);
     ipcMain.on("AUDIO_CAPTURE_SET_MUTED", this._handleSetMuted);
     ipcMain.on(
       "AUDIO_CAPTURE_START_EXTERNAL_AUDIO_CAPTURE",
@@ -73,6 +74,7 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
   destroy() {
     ipcMain.off("AUDIO_CAPTURE_START", this._handleStart);
     ipcMain.off("AUDIO_CAPTURE_SET_LOOPBACK", this._handleSetLoopback);
+    ipcMain.off("AUDIO_CAPTURE_SET_VIRTUAL_MIC", this._handleSetVirtualMic);
     ipcMain.off("AUDIO_CAPTURE_SET_MUTED", this._handleSetMuted);
     ipcMain.off(
       "AUDIO_CAPTURE_START_EXTERNAL_AUDIO_CAPTURE",
@@ -112,6 +114,13 @@ export class AudioCaptureManagerMain extends TypedEmitter<AudioCaptureManagerEve
 
   _handleSetLoopback = (_: Electron.IpcMainEvent, loopback: boolean) => {
     this._browserWindow.webContents.send("AUDIO_CAPTURE_SET_LOOPBACK", loopback);
+  };
+
+  _handleSetVirtualMic = (_: Electron.IpcMainEvent, enabled: boolean) => {
+    this._browserWindow.webContents.send(
+      "AUDIO_CAPTURE_SET_VIRTUAL_MIC",
+      enabled
+    );
   };
 
   _handleSetMuted = (

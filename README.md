@@ -13,6 +13,11 @@ This is an unofficial fork of [owlbear-rodeo/kenku-fm](https://github.com/owlbea
   - If the selected file is missing or invalid, Kenku falls back to its original colours and switches back once the file is fixed. Invalid files are greyed out in the selector.
   - An **Open Theme Folder** button opens the folder in your file manager.
 - **Desktop theme integration.** Because themes reload live, a tool that regenerates a theme file when your desktop palette changes (for example a [Noctalia](https://docs.noctalia.dev) template) keeps Kenku in sync with the rest of your desktop.
+- **PipeWire virtual microphone (Linux only).** When `pw-loopback` is installed, Kenku creates a **Kenku FM** microphone at startup and removes it on quit. Select **Kenku FM Virtual Mic** in the Output list to play into it, then choose **Kenku FM** as the microphone in your voice chat app; no manual routing or auto-connect scripts needed.
+  - Enable **Multiple Outputs** to play to **This Computer** and the virtual mic at the same time.
+  - Your choice of This Computer / Virtual Mic is remembered between launches.
+  - Kenku's own devices are hidden from the External Inputs list to prevent feedback loops. Ignore the **Monitor of Kenku FM Output** entry other apps show; it carries the same audio.
+  - On Windows, macOS, or Linux without PipeWire, nothing changes.
 
 ### Theme file format
 
