@@ -2,6 +2,44 @@
 
 # Kenku FM
 
+## About this fork
+
+This is an unofficial fork of [owlbear-rodeo/kenku-fm](https://github.com/owlbear-rodeo/kenku-fm). It is not affiliated with or supported by Owlbear Rodeo; please report issues with fork features here, not upstream.
+
+### New features
+
+- **Custom colour themes.** Every `*.json` file in the theme folder (`~/.config/Kenku FM/theme/` on Linux, alongside Kenku's existing data) appears in a new **Settings → Theme** selector. Kenku recolours instantly when you switch themes or edit the selected file, in both the main window and the player.
+  - `default.json` is created on first launch with Kenku's original colours and is never overwritten, so it's a safe starting point to copy.
+  - If the selected file is missing or invalid, Kenku falls back to its original colours and switches back once the file is fixed. Invalid files are greyed out in the selector.
+  - An **Open Theme Folder** button opens the folder in your file manager.
+- **Desktop theme integration.** Because themes reload live, a tool that regenerates a theme file when your desktop palette changes (for example a [Noctalia](https://docs.noctalia.dev) template) keeps Kenku in sync with the rest of your desktop.
+
+### Theme file format
+
+```json
+{
+  "mode": "dark",
+  "colors": {
+    "primary": "#bb99ff",
+    "on_primary": "#000000de",
+    "secondary": "#ee99ff",
+    "on_secondary": "#000000de",
+    "error": "#f44336",
+    "on_error": "#ffffff",
+    "surface": "#1e2231",
+    "surface_container": "#222639",
+    "surface_container_high": "#2d3143",
+    "on_surface": "#ffffff",
+    "on_surface_variant": "#ffffffb3",
+    "outline_variant": "#ffffff1f"
+  }
+}
+```
+
+`mode` is `dark` or `light`. Every colour above is required and must be `#rrggbb` or `#rrggbbaa`; any extra keys are ignored. The names follow Material Design's colour roles, so palettes from Material-based tools map across directly.
+
+## About Kenku FM
+
 Kenku FM is a desktop application for Windows, MacOS and Linux designed to be the easiest way to share music in a Discord voice call.
 
 - Use the Kenku Player interface to share your **local music** and sound effects to your discord calls.

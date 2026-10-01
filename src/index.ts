@@ -1,4 +1,3 @@
-import "./main/userDataPath";
 import os from "os";
 import {
   app,
