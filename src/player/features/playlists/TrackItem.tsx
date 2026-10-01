@@ -6,6 +6,7 @@ import PlayArrow from "@mui/icons-material/PlayArrowRounded";
 import Pause from "@mui/icons-material/PauseRounded";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
+import { alpha } from "@mui/material/styles";
 
 import MoreVert from "@mui/icons-material/MoreVertRounded";
 import Menu from "@mui/material/Menu";
@@ -87,7 +88,7 @@ export function TrackItem({ track, playlist, onPlay }: TrackItemProps) {
           minWidth: 0,
           width: "100%",
           m: 0.5,
-          backgroundColor: "rgba(34, 38, 57, 0.8)",
+          backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.8),
         }}
       >
         <ListItemButton

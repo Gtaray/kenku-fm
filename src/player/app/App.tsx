@@ -22,16 +22,16 @@ import { useSoundboardPlayback } from "../features/soundboards/useSoundboardPlay
 import { SoundboardRemote } from "../features/soundboards/SoundboardRemote";
 import { SoundboardPlaybackSync } from "../features/soundboards/SoundboardPlaybackSync";
 
-const WallPaper = styled("div")({
+const WallPaper = styled("div")(({ theme }) => ({
   position: "fixed",
   width: "100%",
   height: "100%",
   top: 0,
   left: 0,
   overflow: "hidden",
-  background: "#1e2231",
+  background: theme.palette.background.default,
   zIndex: -1,
-});
+}));
 
 export function App() {
   const [errorMessage, setErrorMessage] = useState<string>();

@@ -14,16 +14,16 @@ import icon from "../../assets/icon.svg";
 import "./App.css";
 import Typography from "@mui/material/Typography";
 
-const WallPaper = styled("div")({
+const WallPaper = styled("div")(({ theme }) => ({
   position: "absolute",
   width: "100%",
   height: "100%",
   top: 0,
   left: 0,
   overflow: "hidden",
-  background: "linear-gradient(#2D3143 0%, #1e2231 100%)",
+  background: theme.palette.background.wallpaper,
   zIndex: -1,
-});
+}));
 
 export function App() {
   const [message, setMessage] = useState<string>();

@@ -5,6 +5,7 @@ import {
   SoundboardPlaybackReply,
   SoundboardsReply,
 } from "../types/player";
+import "../preload/theme";
 
 type Channel =
   | "PLAYER_REMOTE_PLAYLIST_GET_ALL_REQUEST"

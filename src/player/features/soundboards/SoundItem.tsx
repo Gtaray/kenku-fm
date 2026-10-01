@@ -16,6 +16,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
 import styled from "@mui/material/styles/styled";
+import { alpha } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
@@ -145,7 +146,7 @@ export function SoundItem({ id, soundboard, onPlay, onStop }: SoundItemProps) {
         sx={{
           display: "flex",
           flexDirection: "column",
-          backgroundColor: "rgba(34, 38, 57, 0.8)",
+          backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.8),
           position: "relative",
         }}
       >

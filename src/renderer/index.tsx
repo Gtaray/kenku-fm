@@ -5,19 +5,18 @@ import { Provider } from "react-redux";
 import Backdrop from "@mui/material/Backdrop";
 import CircularProgress from "@mui/material/CircularProgress";
 import CssBaseline from "@mui/material/CssBaseline";
-import ThemeProvider from "@mui/material/styles/ThemeProvider";
 import { PersistGate } from "redux-persist/integration/react";
 
 import { App } from "./app/App";
 import { persistor, store } from "./app/store";
-import { theme } from "./app/theme";
+import { KenkuThemeProvider } from "./app/KenkuThemeProvider";
 import ErrorBoundary from "./common/ErrorBoundary";
 
 const container = document.getElementById("root");
 const root = createRoot(container);
 
 root.render(
-  <ThemeProvider theme={theme}>
+  <KenkuThemeProvider>
     <ErrorBoundary>
       <Provider store={store}>
         <PersistGate
@@ -33,5 +32,5 @@ root.render(
         </PersistGate>
       </Provider>
     </ErrorBoundary>
-  </ThemeProvider>
+  </KenkuThemeProvider>
 );

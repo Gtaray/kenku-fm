@@ -37,16 +37,16 @@ import { getRandomBackground } from "../../backgrounds";
 import { useHideScrollbar } from "../../../renderer/common/useHideScrollbar";
 import { useNavigate } from "react-router-dom";
 
-const WallPaper = styled("div")({
+const WallPaper = styled("div")(({ theme }) => ({
   position: "absolute",
   width: "100%",
   height: "100%",
   top: 0,
   left: 0,
   overflow: "hidden",
-  background: "linear-gradient(#2D3143 0%, #1e2231 100%)",
+  background: theme.palette.background.wallpaper,
   zIndex: -1,
-});
+}));
 
 type PlaylistsProps = {
   onPlay: (track: Track) => void;

@@ -37,6 +37,7 @@ import {
   StreamingMode,
 } from "./settingsSlice";
 import { showWindowControls } from "../../common/showWindowControls";
+import { useThemeState } from "../../app/KenkuThemeProvider";
 
 type SettingsProps = {
   open: boolean;
@@ -255,6 +256,47 @@ export function Settings({ open, onClose }: SettingsProps) {
     </FormControl>
   );
 
+  const themeState = useThemeState();
+  const selectedTheme = themeState.themes.find(
+    (theme) => theme.id === themeState.selected,
+  );
+
+  const themeSettings = (
+    <Stack spacing={1}>
+      <FormControl fullWidth variant="standard" margin="dense">
+        <InputLabel id="theme-select-label">Theme</InputLabel>
+        <Select
+          labelId="theme-select-label"
+          label="Theme"
+          value={themeState.selected}
+          onChange={(event) => window.kenkuTheme.select(event.target.value)}
+        >
+          {themeState.themes.map(({ id, valid }) => (
+            <MenuItem key={id} value={id} disabled={!valid}>
+              {valid ? id : `${id} (invalid)`}
+            </MenuItem>
+          ))}
+          {!selectedTheme && (
+            <MenuItem value={themeState.selected} disabled>
+              {themeState.selected} (missing)
+            </MenuItem>
+          )}
+        </Select>
+        {!selectedTheme?.valid && (
+          <FormHelperText>Using built-in colours</FormHelperText>
+        )}
+      </FormControl>
+      <Button
+        onClick={() => window.kenkuTheme.openFolder()}
+        fullWidth
+        variant="outlined"
+        size="small"
+      >
+        Open Theme Folder
+      </Button>
+    </Stack>
+  );
+
   function handleShowControlsToggle() {
     dispatch(setURLBarEnabled(!settings.urlBarEnabled));
   }
@@ -367,6 +409,9 @@ export function Settings({ open, onClose }: SettingsProps) {
         <DialogContentText>Streaming</DialogContentText>
         {streamingSettings}
         <Divider sx={{ mb: 2 }} />
+        <DialogContentText>Theme</DialogContentText>
+        {themeSettings}
+        <Divider sx={{ my: 2 }} />
         <DialogContentText>Other</DialogContentText>
         {otherSettings}
         <Stack my={1}>

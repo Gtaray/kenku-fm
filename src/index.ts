@@ -1,3 +1,4 @@
+import "./main/userDataPath";
 import os from "os";
 import {
   app,
@@ -14,6 +15,7 @@ import { getMalformedUserAgent, getUserAgent } from "./main/userAgent";
 import { SessionManager } from "./main/managers/SessionManager";
 import { runAutoUpdate } from "./autoUpdate";
 import { getSavedBounds, saveWindowBounds } from "./bounds";
+import { ThemeManager } from "./main/theme/ThemeManager";
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -105,6 +107,9 @@ if (!hasSingleInstanceLock) {
   // Workaround to allow for webpack support with widevine
   // https://github.com/castlabs/electron-releases/issues/116
   const widevine = components;
+
+  // Must exist before any window loads, as the preloads request the theme synchronously
+  new ThemeManager();
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.

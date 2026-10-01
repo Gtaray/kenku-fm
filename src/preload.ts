@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import { BrowserViewManagerPreload } from "./preload/managers/BrowserViewManagerPreload";
+import "./preload/theme";
 
 const viewManager = new BrowserViewManagerPreload();
 
