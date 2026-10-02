@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import {
+  LoopPoints,
+  LoopTags,
   PlaylistPlaybackReply,
   PlaylistsReply,
   SoundboardPlaybackReply,
@@ -19,6 +21,7 @@ type Channel =
   | "PLAYER_REMOTE_PLAYLIST_PLAYBACK_NEXT"
   | "PLAYER_REMOTE_PLAYLIST_PLAYBACK_PREVIOUS"
   | "PLAYER_REMOTE_PLAYLIST_PLAYBACK_REPEAT"
+  | "PLAYER_REMOTE_PLAYLIST_PLAYBACK_LOOP"
   | "PLAYER_REMOTE_PLAYLIST_PLAYBACK_SHUFFLE"
   | "PLAYER_REMOTE_SOUNDBOARD_GET_ALL_REQUEST"
   | "PLAYER_REMOTE_SOUNDBOARD_PLAY"
@@ -37,6 +40,7 @@ const validChannels: Channel[] = [
   "PLAYER_REMOTE_PLAYLIST_PLAYBACK_NEXT",
   "PLAYER_REMOTE_PLAYLIST_PLAYBACK_PREVIOUS",
   "PLAYER_REMOTE_PLAYLIST_PLAYBACK_REPEAT",
+  "PLAYER_REMOTE_PLAYLIST_PLAYBACK_LOOP",
   "PLAYER_REMOTE_PLAYLIST_PLAYBACK_SHUFFLE",
   "PLAYER_REMOTE_SOUNDBOARD_GET_ALL_REQUEST",
   "PLAYER_REMOTE_SOUNDBOARD_PLAY",
@@ -78,6 +82,19 @@ const api = {
     ipcRenderer.send("SHELL_OPEN_EXTERNAL", url);
   },
   platform: process.platform,
+  looperAvailable: ipcRenderer.sendSync("MUSIC_LOOPER_AVAILABLE") as boolean,
+  readLoopTags: (filePath: string) =>
+    ipcRenderer.invoke("MUSIC_LOOPER_READ_TAGS", filePath) as Promise<LoopTags>,
+  analyzeLoop: (filePath: string) =>
+    ipcRenderer.invoke("MUSIC_LOOPER_ANALYZE", filePath) as Promise<LoopPoints>,
+  /** Start and end in seconds */
+  writeLoopTags: (filePath: string, start: number, end: number) =>
+    ipcRenderer.invoke(
+      "MUSIC_LOOPER_WRITE_TAGS",
+      filePath,
+      start,
+      end
+    ) as Promise<void>,
 };
 
 declare global {

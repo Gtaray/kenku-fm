@@ -25,6 +25,8 @@ export interface PlaylistPlaybackState {
   muted: boolean;
   shuffle: boolean;
   repeat: Repeat;
+  /** Loop tracks between their loop points */
+  loopEnabled: boolean;
   track?: Track;
   playback?: Playback;
 }
@@ -35,6 +37,7 @@ const initialState: PlaylistPlaybackState = {
   muted: false,
   shuffle: false,
   repeat: "playlist",
+  loopEnabled: false,
 };
 
 export const playlistPlaybackSlice = createSlice({
@@ -222,6 +225,9 @@ export const playlistPlaybackSlice = createSlice({
     repeat: (state, action: PayloadAction<Repeat>) => {
       state.repeat = action.payload;
     },
+    setLoopEnabled: (state, action: PayloadAction<boolean>) => {
+      state.loopEnabled = action.payload;
+    },
   },
 });
 
@@ -240,6 +246,7 @@ export const {
   mute,
   shuffle,
   repeat,
+  setLoopEnabled,
 } = playlistPlaybackSlice.actions;
 
 export default playlistPlaybackSlice.reducer;

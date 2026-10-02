@@ -30,8 +30,12 @@ This is an unofficial fork of [owlbear-rodeo/kenku-fm](https://github.com/owlbea
 - **Add Bookmark button.** The **+** next to **Bookmarks** adds a bookmark by URL.
 - **Per-tab volume.** Hover a tab's speaker icon for a volume slider; clicking the icon still mutes.
 - **Track and playlist copy/paste.** Copy a track and paste it into another playlist, duplicate a playlist, copy a track's file path or link, and show a local track in your file manager or open a web track in your browser.
+- **Seamless loop points.** The player's loop button (∞) plays a track's intro once, then loops it between its loop points with no gap, also while the player tab is hidden. Works with local FLAC, WAV, Ogg Vorbis and MP3 files up to 30 minutes long.
+  - Loop points come from the file's loop tags (`LOOP_START`/`LOOP_END`, `LOOPSTART`/`LOOPLENGTH`, …) or are found automatically by [music-looper](https://github.com/Gtaray/music-looper), which must be installed and on your `PATH`. You can also set them by hand in **Edit Track → Loop**.
+  - Tags are only written to a file when you press **Write Tags** (FLAC only).
+  - The remote API adds `PUT /v1/playlist/playback/loop` with `{ "loop": true }`, and `loopEnabled` in `GET /v1/playlist/playback`.
 
-Ad blocking, bookmarks, per-tab volume and copy/paste are ported from [Soteyl/better-kenku-fm](https://github.com/Soteyl/better-kenku-fm).
+Ad blocking, bookmarks, per-tab volume, copy/paste and the loop point interface are ported from [Soteyl/better-kenku-fm](https://github.com/Soteyl/better-kenku-fm).
 
 ### Theme file format
 

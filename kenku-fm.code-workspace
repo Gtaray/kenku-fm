@@ -9,7 +9,11 @@
 			"path": "../fluxer"
 		},
 		{
+			"name": "better-kenku-fm",
 			"path": "../better-kenku-fm"
+		},
+		{
+			"path": "../music-looper"
 		}
 	],
 	"settings": {}

@@ -1,9 +1,16 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export type LoopSource = "tags" | "analysis" | "manual";
+
 export interface Track {
   id: string;
   url: string;
   title: string;
+  /** Seconds */
+  loopStart?: number;
+  /** Seconds */
+  loopEnd?: number;
+  loopSource?: LoopSource;
 }
 
 export interface Playlist {

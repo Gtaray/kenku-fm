@@ -14,9 +14,11 @@ import VolumeUp from "@mui/icons-material/VolumeUp";
 import RepeatIcon from "@mui/icons-material/RepeatRounded";
 import RepeatOne from "@mui/icons-material/RepeatOneRounded";
 import Shuffle from "@mui/icons-material/ShuffleRounded";
+import Loop from "@mui/icons-material/AllInclusiveRounded";
 import Next from "@mui/icons-material/SkipNextRounded";
 import Previous from "@mui/icons-material/SkipPreviousRounded";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import Tooltip from "@mui/material/Tooltip";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../app/store";
@@ -26,7 +28,13 @@ import {
   mute,
   shuffle,
   repeat,
+  setLoopEnabled,
 } from "../playlists/playlistPlaybackSlice";
+import {
+  loopUnsupportedReason,
+  MAX_LOOP_TRACK_SECONDS,
+  trackLoopRange,
+} from "../playlists/trackLoop";
 
 const minWidthForLargeContext = 650;
 
@@ -134,6 +142,24 @@ function Controls({
   const playbackRepeat = useSelector(
     (state: RootState) => state.playlistPlayback.repeat,
   );
+  const loopEnabled = useSelector(
+    (state: RootState) => state.playlistPlayback.loopEnabled,
+  );
+  const tooLongToLoop = useSelector(
+    (state: RootState) =>
+      (state.playlistPlayback.playback?.duration ?? 0) > MAX_LOOP_TRACK_SECONDS,
+  );
+  const unsupportedReason = useSelector((state: RootState) => {
+    const track = state.playlistPlayback.track;
+    return track
+      ? loopUnsupportedReason(state.playlists.tracks[track.id] ?? track)
+      : undefined;
+  });
+  const loopDisabledReason =
+    unsupportedReason ??
+    (tooLongToLoop
+      ? "Looping is unavailable for tracks longer than 30 minutes"
+      : undefined);
 
   function handlePlay() {
     dispatch(playPause(!playing));
@@ -196,6 +222,21 @@ function Controls({
       >
         <Next />
       </IconButton>
+      <Tooltip title={loopDisabledReason ?? "Loop between loop points"}>
+        <span>
+          <IconButton
+            aria-label={loopEnabled ? "loop enabled" : "loop disabled"}
+            onClick={() => dispatch(setLoopEnabled(!loopEnabled))}
+            disabled={Boolean(loopDisabledReason)}
+          >
+            <Loop
+              color={
+                loopEnabled && !loopDisabledReason ? "primary" : undefined
+              }
+            />
+          </IconButton>
+        </span>
+      </Tooltip>
       <IconButton aria-label={`repeat ${playbackRepeat}`} onClick={handlRepeat}>
         {playbackRepeat === "off" ? (
           <RepeatIcon />
@@ -263,6 +304,17 @@ function Time({ onPlaylistSeek }: Pick<PlaylistPlayerProps, "onPlaylistSeek">) {
   const playback = useSelector(
     (state: RootState) => state.playlistPlayback.playback,
   );
+  const loopEnabled = useSelector(
+    (state: RootState) => state.playlistPlayback.loopEnabled,
+  );
+  const track = useSelector((state: RootState) =>
+    state.playlistPlayback.track
+      ? state.playlists.tracks[state.playlistPlayback.track.id]
+      : undefined,
+  );
+  const loopAnalysis = useSelector((state: RootState) =>
+    track ? state.loopAnalysis[track.id] : undefined,
+  );
 
   function formatDuration(value: number) {
     const minute = Math.floor(value / 60);
@@ -280,9 +332,47 @@ function Time({ onPlaylistSeek }: Pick<PlaylistPlayerProps, "onPlaylistSeek">) {
 
   const time = timeOverride === null ? playback?.progress || 0 : timeOverride;
   const duration = playback?.duration || 0;
+  const loopRange =
+    loopEnabled && track ? trackLoopRange(track, duration) : null;
+  const loopStartPercent = loopRange ? (loopRange.start / duration) * 100 : 0;
+  const loopEndPercent = loopRange ? (loopRange.end / duration) * 100 : 0;
 
   return (
-    <Box>
+    <Box sx={{ position: "relative" }}>
+      {loopRange && (
+        <>
+          <Box
+            sx={{
+              position: "absolute",
+              left: `${loopStartPercent}%`,
+              width: `${loopEndPercent - loopStartPercent}%`,
+              top: 6,
+              height: 4,
+              borderRadius: 1,
+              bgcolor: "primary.main",
+              opacity: 0.55,
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+          {[loopStartPercent, loopEndPercent].map((percent) => (
+            <Box
+              key={percent}
+              sx={{
+                position: "absolute",
+                left: `calc(${percent}% - 1px)`,
+                top: 2,
+                width: 2,
+                height: 12,
+                borderRadius: 1,
+                bgcolor: "primary.main",
+                pointerEvents: "none",
+                zIndex: 2,
+              }}
+            />
+          ))}
+        </>
+      )}
       <TimeSlider
         aria-label="time-indicator"
         size="small"
@@ -305,6 +395,16 @@ function Time({ onPlaylistSeek }: Pick<PlaylistPlayerProps, "onPlaylistSeek">) {
         <TinyText>{formatDuration(time)}</TinyText>
         <TinyText>-{formatDuration(duration - time)}</TinyText>
       </Box>
+      {loopEnabled && loopAnalysis?.state === "pending" && (
+        <Typography variant="caption" color="text.secondary">
+          Finding loop points...
+        </Typography>
+      )}
+      {loopEnabled && loopAnalysis?.state === "error" && (
+        <Typography variant="caption" color="warning.main">
+          Loop analysis failed: {loopAnalysis.error}
+        </Typography>
+      )}
     </Box>
   );
 }

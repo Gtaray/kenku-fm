@@ -10,11 +10,48 @@ import {
   updateQueue,
   stopTrack,
 } from "./playlistPlaybackSlice";
-import { Track } from "./playlistsSlice";
+import { editTrack, Track } from "./playlistsSlice";
+import { clearLoopAnalysis, setLoopAnalysis } from "./loopAnalysisSlice";
+import { enableNativeLoop } from "./nativeLoop";
+import {
+  canLoopTrack,
+  findLoopPoints,
+  hasLoopPoints,
+  loopErrorMessage,
+  loopUnsupportedReason,
+  trackFilePath,
+  trackLoopRange,
+} from "./trackLoop";
+
+/** Reads only the file's metadata, resolves 0 if it can't be read */
+function probeDuration(url: string): Promise<number> {
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    audio.preload = "metadata";
+    const done = (duration: number) => {
+      audio.removeAttribute("src");
+      audio.load();
+      resolve(duration);
+    };
+    audio.onloadedmetadata = () => done(audio.duration || 0);
+    audio.onerror = () => done(0);
+    audio.src = url;
+  });
+}
 
 export function usePlaylistPlayback(onError: (message: string) => void) {
   const trackRef = useRef<Howl | null>(null);
   const animationRef = useRef<number | null>(null);
+  // Bound to every Howl so a replayed track still gets an end listener
+  const handleEndRef = useRef<() => void>(() => {});
+  const loopSettersRef = useRef(
+    new WeakMap<Howl, ReturnType<typeof enableNativeLoop>>()
+  );
+  // Howls created in Web Audio mode on purpose, so a fallback to html5 isn't retried
+  const webAudioRequestedRef = useRef(new WeakSet<Howl>());
+  const loadedTrackIdRef = useRef<string | null>(null);
+  const loadGenerationRef = useRef(0);
+  const loadedGenerationRef = useRef(0);
 
   const playlists = useSelector((state: RootState) => state.playlists);
   const store = useStore<RootState>();
@@ -29,11 +66,47 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
   const playbackTrack = useSelector(
     (state: RootState) => state.playlistPlayback.track
   );
+  const loopEnabled = useSelector(
+    (state: RootState) => state.playlistPlayback.loopEnabled
+  );
+  const duration = useSelector(
+    (state: RootState) => state.playlistPlayback.playback?.duration ?? 0
+  );
+  // The saved track, so loop point edits apply to the playing track
+  const currentTrack = useSelector((state: RootState) =>
+    state.playlistPlayback.track
+      ? state.playlists.tracks[state.playlistPlayback.track.id]
+      : undefined
+  );
+  const currentLoopAnalysis = useSelector((state: RootState) =>
+    currentTrack ? state.loopAnalysis[currentTrack.id] : undefined
+  );
   const dispatch = useDispatch();
 
-  const play = useCallback(
-    (track: Track) => {
-      let prevTrack = trackRef.current;
+  /** `replace` swaps an html5 Howl of the same track for a Web Audio one */
+  const load = useCallback(
+    async (track: Track, replace?: Howl) => {
+      const generation = ++loadGenerationRef.current;
+      const state = store.getState();
+      if (state.loopAnalysis[track.id]?.state === "error") {
+        dispatch(clearLoopAnalysis(track.id));
+      }
+
+      // Web Audio decodes the whole file, so only use it when the track can loop
+      let webAudio = Boolean(replace);
+      if (
+        !replace &&
+        state.playlistPlayback.loopEnabled &&
+        !loopUnsupportedReason(track)
+      ) {
+        const fileDuration = await probeDuration(track.url);
+        if (generation !== loadGenerationRef.current) {
+          return;
+        }
+        webAudio = canLoopTrack(track, fileDuration);
+      }
+
+      let prevTrack = replace ? undefined : trackRef.current;
       function removePrevTrack() {
         if (prevTrack) {
           prevTrack.unload();
@@ -41,7 +114,17 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
         }
       }
       function error() {
+        if (generation !== loadGenerationRef.current) {
+          return;
+        }
+        loadedGenerationRef.current = generation;
+        if (replace) {
+          // Keep playing the html5 Howl, just without looping
+          trackRef.current = replace;
+          return;
+        }
         trackRef.current = undefined;
+        loadedTrackIdRef.current = null;
         dispatch(stopTrack());
         removePrevTrack();
         onError(`Unable to play track: ${track.title}`);
@@ -50,25 +133,65 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
       try {
         const howl = new Howl({
           src: track.url,
-          html5: true,
+          html5: !webAudio,
           mute: muted,
           volume: 0,
         });
+        if (webAudio) {
+          webAudioRequestedRef.current.add(howl);
+        }
 
-        trackRef.current = howl;
+        // While swapping, controls keep acting on the playing Howl until the new one loads
+        if (!replace) {
+          trackRef.current = howl;
+        }
         howl.once("load", () => {
-          dispatch(
-            playTrack({
-              track,
-              duration: Math.floor(howl.duration()),
-            })
-          );
-          // Fade out previous track and fade in new track
-          if (prevTrack) {
-            prevTrack.fade(prevTrack.volume(), 0, 1000);
-            prevTrack.once("fade", removePrevTrack);
+          if (generation !== loadGenerationRef.current) {
+            howl.unload();
+            return;
           }
-          howl.fade(0, store.getState().playlistPlayback.volume, 1000);
+          trackRef.current = howl;
+          loadedTrackIdRef.current = track.id;
+          loadedGenerationRef.current = generation;
+
+          const playback = store.getState().playlistPlayback;
+          if ((howl as unknown as { _webAudio: boolean })._webAudio) {
+            const setLoop = enableNativeLoop(howl);
+            loopSettersRef.current.set(howl, setLoop);
+            const latestTrack = store.getState().playlists.tracks[track.id];
+            if (playback.loopEnabled && latestTrack) {
+              setLoop(trackLoopRange(latestTrack, howl.duration()));
+            }
+          }
+
+          if (replace) {
+            const wasPlaying = replace.playing();
+            howl.seek(Number(replace.seek()) || 0);
+            howl.volume(replace.volume());
+            replace.unload();
+            if (wasPlaying) {
+              howl.play();
+            }
+          } else {
+            // The store doesn't change when the same track restarts, so PlaylistPlaybackSync won't play it
+            const restartSameTrack =
+              playback.playing && playback.track === track;
+            dispatch(
+              playTrack({
+                track,
+                duration: Math.floor(howl.duration()),
+              })
+            );
+            if (restartSameTrack) {
+              howl.play();
+            }
+            // Fade out previous track and fade in new track
+            if (prevTrack) {
+              prevTrack.fade(prevTrack.volume(), 0, 1000);
+              prevTrack.once("fade", removePrevTrack);
+            }
+            howl.fade(0, playback.volume, 1000);
+          }
           // Update playback
           // Create playback animation
           if (animationRef.current !== null) {
@@ -91,6 +214,12 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
 
         howl.on("playerror", error);
 
+        howl.on("end", () => {
+          if (trackRef.current === howl) {
+            handleEndRef.current();
+          }
+        });
+
         const sound = (howl as any)._sounds[0];
         if (!sound) {
           error();
@@ -101,6 +230,8 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
     },
     [onError, muted, store]
   );
+
+  const play = useCallback((track: Track) => load(track), [load]);
 
   const seek = useCallback((to: number) => {
     dispatch(updatePlayback(to));
@@ -200,9 +331,9 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
   }, [repeat, queue, shuffle, playbackTrack, playlists, seek, play, stop]);
 
   useEffect(() => {
-    const track = trackRef.current;
     // Move to next song or repeat this song on track end
-    function handleEnd() {
+    handleEndRef.current = () => {
+      const track = trackRef.current;
       if (!queue) {
         stop();
       } else if (repeat === "track") {
@@ -239,12 +370,68 @@ export function usePlaylistPlayback(onError: (message: string) => void) {
           }
         }
       }
-    }
-    track?.on("end", handleEnd);
-    return () => {
-      track?.off("end", handleEnd);
     };
   }, [repeat, queue, shuffle, playbackTrack, playlists, play, seek, stop]);
+
+  // Apply loop toggles and loop point edits to the playing track
+  useEffect(() => {
+    const howl = trackRef.current;
+    if (
+      !howl ||
+      !currentTrack ||
+      loadGenerationRef.current !== loadedGenerationRef.current ||
+      loadedTrackIdRef.current !== currentTrack.id ||
+      howl.state() !== "loaded"
+    ) {
+      return;
+    }
+    const range = loopEnabled
+      ? trackLoopRange(currentTrack, howl.duration())
+      : null;
+    const setLoop = loopSettersRef.current.get(howl);
+    if (setLoop) {
+      setLoop(range);
+    } else if (range && !webAudioRequestedRef.current.has(howl)) {
+      // html5 audio can't loop between points
+      load(currentTrack, howl);
+    }
+  }, [currentTrack, loopEnabled, load]);
+
+  // Find loop points for the playing track: tags first, then analysis
+  useEffect(() => {
+    if (
+      !loopEnabled ||
+      !currentTrack ||
+      !window.player.looperAvailable ||
+      currentLoopAnalysis ||
+      hasLoopPoints(currentTrack) ||
+      !canLoopTrack(currentTrack, duration)
+    ) {
+      return;
+    }
+    const filePath = trackFilePath(currentTrack);
+    if (!filePath) {
+      return;
+    }
+    const { id, url } = currentTrack;
+    dispatch(setLoopAnalysis({ trackId: id, analysis: { state: "pending" } }));
+    findLoopPoints(filePath)
+      .then((points) => {
+        const latest = store.getState().playlists.tracks[id];
+        if (latest?.url === url && !hasLoopPoints(latest)) {
+          dispatch(editTrack({ id, ...points }));
+        }
+        dispatch(clearLoopAnalysis(id));
+      })
+      .catch((error) => {
+        dispatch(
+          setLoopAnalysis({
+            trackId: id,
+            analysis: { state: "error", error: loopErrorMessage(error) },
+          })
+        );
+      });
+  }, [loopEnabled, currentTrack, currentLoopAnalysis, duration, store]);
 
   const pauseResume = useCallback((resume: boolean) => {
     if (trackRef.current) {

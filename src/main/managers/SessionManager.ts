@@ -1,5 +1,6 @@
 import { BrowserWindow } from "electron";
 import { BrowserViewManagerMain } from "./BrowserViewManagerMain";
+import { MusicLooperManager } from "./MusicLooperManager";
 import { PlaybackManager } from "./PlaybackManager";
 import { PlayerManager } from "./PlayerManager";
 import { SystemManager } from "./SystemManager";
@@ -13,6 +14,7 @@ export class SessionManager {
   private windowManager: WindowManager;
   private systemManager: SystemManager;
   private volumePopupManager: VolumePopupManager;
+  private musicLooperManager: MusicLooperManager;
 
   constructor(window: BrowserWindow) {
     this.playbackManager = new PlaybackManager(window);
@@ -21,6 +23,7 @@ export class SessionManager {
     this.playerManager = new PlayerManager();
     this.systemManager = new SystemManager();
     this.volumePopupManager = new VolumePopupManager(window);
+    this.musicLooperManager = new MusicLooperManager();
   }
 
   destroy() {
@@ -30,5 +33,6 @@ export class SessionManager {
     this.playerManager.destroy();
     this.systemManager.destroy();
     this.volumePopupManager.destroy();
+    this.musicLooperManager.destroy();
   }
 }

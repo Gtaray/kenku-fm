@@ -4,6 +4,7 @@ export interface PlaylistPlaybackReply {
   muted: boolean;
   shuffle: boolean;
   repeat: "off" | "track" | "playlist";
+  loopEnabled: boolean;
   track?: {
     id: string;
     url: string;
@@ -16,6 +17,16 @@ export interface PlaylistPlaybackReply {
     title: string;
   };
 }
+
+/** Loop points in seconds */
+export interface LoopPoints {
+  sampleRate: number;
+  start: number;
+  end: number;
+}
+
+/** Start and end are missing when the file has no loop tags */
+export type LoopTags = Partial<LoopPoints> & { sampleRate: number };
 
 export interface SoundboardPlaybackReply {
   sounds: {

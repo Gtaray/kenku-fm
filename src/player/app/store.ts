@@ -4,6 +4,7 @@ import soundboardsReducer from "../features/soundboards/soundboardsSlice";
 import playlsitPlaybackReducer from "../features/playlists/playlistPlaybackSlice";
 import soundboardPlaybackReducer from "../features/soundboards/soundboardPlaybackSlice";
 import trackClipboardReducer from "../features/playlists/trackClipboardSlice";
+import loopAnalysisReducer from "../features/playlists/loopAnalysisSlice";
 
 import {
   persistStore,
@@ -21,7 +22,7 @@ const playbackPersistConfig = {
   key: "playback",
   version: 1,
   storage,
-  whitelist: ["volume", "muted", "shuffle", "repeat"],
+  whitelist: ["volume", "muted", "shuffle", "repeat", "loopEnabled"],
 };
 
 const rootReducer = combineReducers({
@@ -33,6 +34,7 @@ const rootReducer = combineReducers({
   ),
   soundboardPlayback: soundboardPlaybackReducer,
   trackClipboard: trackClipboardReducer,
+  loopAnalysis: loopAnalysisReducer,
 });
 
 const persistConfig = {
