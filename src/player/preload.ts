@@ -70,7 +70,14 @@ const api = {
   },
   getPathForFile: (file: File) => {
     return webUtils.getPathForFile(file);
-  } 
+  },
+  showItemInFolder: (filePath: string) => {
+    ipcRenderer.send("SHELL_SHOW_ITEM_IN_FOLDER", filePath);
+  },
+  openExternal: (url: string) => {
+    ipcRenderer.send("SHELL_OPEN_EXTERNAL", url);
+  },
+  platform: process.platform,
 };
 
 declare global {

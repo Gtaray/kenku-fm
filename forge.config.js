@@ -84,6 +84,14 @@ const config = {
                 js: "./src/audioCapture/preload.ts",
               },
             },
+            {
+              html: "./src/volumePopup/index.html",
+              js: "./src/volumePopup/renderer.tsx",
+              name: "volume_popup_window",
+              preload: {
+                js: "./src/volumePopup/preload.ts",
+              },
+            },
           ],
         },
         devContentSecurityPolicy: "",

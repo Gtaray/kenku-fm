@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import Stack from "@mui/material/Stack";
 
 import { RootState } from "../../app/store";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch, useStore } from "react-redux";
 import {
   addTab,
   decreaseTabPlayingMedia,
@@ -20,6 +20,7 @@ import {
   increasePlayingMedia,
 } from "../player/playerSlice";
 import { editBookmark } from "../bookmarks/bookmarksSlice";
+import { setTabMuted, setTabVolume } from "./tabAudio";
 
 /**
  * Safely parse a URL string. Returns a URL object if valid, otherwise null.
@@ -36,6 +37,7 @@ export const safeURL = (urlString: string): URL | null => {
 
 export function Tabs() {
   const dispatch = useDispatch();
+  const store = useStore<RootState>();
   const player = useSelector((state: RootState) => state.player);
   const tabs = useSelector((state: RootState) => state.tabs);
   const bookmarks = useSelector((state: RootState) => state.bookmarks);
@@ -150,6 +152,7 @@ export function Tabs() {
           icon: "",
           playingMedia: 0,
           muted: false,
+          volume: 1,
         }),
       );
       dispatch(selectTab(id));
@@ -180,6 +183,27 @@ export function Tabs() {
       window.kenku.removeAllListeners("BROWSER_VIEW_CLOSE_TAB");
     };
   }, [player.tab.id, tabs]);
+
+  useEffect(() => {
+    window.kenku.on("VOLUME_POPUP_VOLUME", (args) => {
+      const tabId: number = args[0];
+      const volume: number = args[1];
+      const state = store.getState();
+      const playerTabId = state.player.tab.id;
+      const tab =
+        tabId === playerTabId ? state.player.tab : state.tabs.tabs.byId[tabId];
+      if (!tab) {
+        return;
+      }
+      if (tab.muted && volume > 0) {
+        setTabMuted(dispatch, playerTabId, tabId, false);
+      }
+      setTabVolume(dispatch, playerTabId, tabId, volume);
+    });
+    return () => {
+      window.kenku.removeAllListeners("VOLUME_POPUP_VOLUME");
+    };
+  }, []);
 
   useEffect(() => {
     if (tabs.selectedTab) {

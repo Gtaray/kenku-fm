@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Kenku FM
+Comment=Share music and sound effects in Fluxer voice channels
+Exec=kenku-fm
+Icon=kenku-fm
+Terminal=false
+StartupWMClass=Kenku FM
+Categories=AudioVideo;Audio;

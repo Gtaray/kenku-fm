@@ -32,6 +32,9 @@ export class AudioCaptureManagerPreload {
   /** Raw media streams for each browser view containing webp/opus audio */
   _mediaStreams: Record<number, MediaStream> = {};
   _mediaStreamOutputs: Record<number, GainNode> = {};
+  _mediaStreamMuted: Record<number, boolean> = {};
+  /** Per view volume from 0 to 1 */
+  _mediaStreamVolumes: Record<number, number> = {};
 
   /** Raw media stream for each external audio source e.g. microphone or virtual audio cables */
   _externalAudioStreams: Record<string, MediaStream> = {};
@@ -54,11 +57,22 @@ export class AudioCaptureManagerPreload {
   }
 
   setMuted(id: number, muted: boolean): void {
-    // Mute the audio context node
+    this._mediaStreamMuted[id] = muted;
+    this._updateViewGain(id);
+  }
+
+  setVolume(id: number, volume: number): void {
+    this._mediaStreamVolumes[id] = volume;
+    this._updateViewGain(id);
+  }
+
+  _updateViewGain(id: number): void {
     // Note: we can't use `webContents.setAudioMuted()` as we are capturing a
     // separate audio stream then what is being sent to the user
     if (this._mediaStreamOutputs[id]) {
-      this._mediaStreamOutputs[id].gain.value = muted ? 0 : 1;
+      this._mediaStreamOutputs[id].gain.value = this._mediaStreamMuted[id]
+        ? 0
+        : (this._mediaStreamVolumes[id] ?? 1);
     }
   }
 
@@ -207,6 +221,7 @@ export class AudioCaptureManagerPreload {
 
       const output = this._audioContext.createGain();
       this._mediaStreamOutputs[viewId] = output;
+      this._updateViewGain(viewId);
 
       const audioSource = this._audioContext.createMediaStreamSource(stream);
       audioSource.connect(output);

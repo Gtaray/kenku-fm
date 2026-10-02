@@ -13,6 +13,8 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 
 import { Track, removeTrack, Playlist } from "./playlistsSlice";
+import { copyTrackToClipboard } from "./trackClipboardSlice";
+import { fileUrlToPath, isLocalFileUrl, revealLabel } from "./trackSource";
 import { useDispatch, useSelector } from "react-redux";
 import { TrackSettings } from "./TrackSettings";
 import { RootState } from "../../app/store";
@@ -57,6 +59,29 @@ export function TrackItem({ track, playlist, onPlay }: TrackItemProps) {
 
   function handleCopyID() {
     navigator.clipboard.writeText(track.id);
+    handleMenuClose();
+  }
+
+  const localFile = isLocalFileUrl(track.url);
+
+  function handleCopyTrack() {
+    dispatch(copyTrackToClipboard(track));
+    handleMenuClose();
+  }
+
+  function handleCopySource() {
+    navigator.clipboard.writeText(
+      localFile ? fileUrlToPath(track.url) : track.url,
+    );
+    handleMenuClose();
+  }
+
+  function handleReveal() {
+    if (localFile) {
+      window.player.showItemInFolder(fileUrlToPath(track.url));
+    } else {
+      window.player.openExternal(track.url);
+    }
     handleMenuClose();
   }
 
@@ -129,6 +154,13 @@ export function TrackItem({ track, playlist, onPlay }: TrackItemProps) {
         slotProps={{ list: { "aria-labelledby": "more-button" } }}
       >
         <MenuItem onClick={handleEdit}>Edit</MenuItem>
+        <MenuItem onClick={handleCopyTrack}>Copy Track</MenuItem>
+        <MenuItem onClick={handleCopySource}>
+          {localFile ? "Copy File Path" : "Copy Link"}
+        </MenuItem>
+        <MenuItem onClick={handleReveal}>
+          {localFile ? revealLabel(window.player.platform) : "Open in Browser"}
+        </MenuItem>
         <MenuItem onClick={handleCopyID}>Copy ID</MenuItem>
         <MenuItem onClick={handleDelete}>Delete</MenuItem>
       </Menu>

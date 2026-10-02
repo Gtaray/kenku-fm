@@ -2,6 +2,8 @@ import { BrowserWindow } from "electron";
 import { BrowserViewManagerMain } from "./BrowserViewManagerMain";
 import { PlaybackManager } from "./PlaybackManager";
 import { PlayerManager } from "./PlayerManager";
+import { SystemManager } from "./SystemManager";
+import { VolumePopupManager } from "./VolumePopupManager";
 import { WindowManager } from "./WindowManager";
 
 export class SessionManager {
@@ -9,12 +11,16 @@ export class SessionManager {
   private playerManager: PlayerManager;
   private viewManager: BrowserViewManagerMain;
   private windowManager: WindowManager;
+  private systemManager: SystemManager;
+  private volumePopupManager: VolumePopupManager;
 
   constructor(window: BrowserWindow) {
     this.playbackManager = new PlaybackManager(window);
     this.viewManager = new BrowserViewManagerMain(window);
     this.windowManager = new WindowManager(window);
     this.playerManager = new PlayerManager();
+    this.systemManager = new SystemManager();
+    this.volumePopupManager = new VolumePopupManager(window);
   }
 
   destroy() {
@@ -22,5 +28,7 @@ export class SessionManager {
     this.viewManager.destroy();
     this.windowManager.destroy();
     this.playerManager.destroy();
+    this.systemManager.destroy();
+    this.volumePopupManager.destroy();
   }
 }

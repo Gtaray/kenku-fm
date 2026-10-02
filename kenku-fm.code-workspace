@@ -7,6 +7,9 @@
 		{
 			"name": "fluxer",
 			"path": "../fluxer"
+		},
+		{
+			"path": "../better-kenku-fm"
 		}
 	],
 	"settings": {}

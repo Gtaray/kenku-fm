@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import { BrowserViewManagerPreload } from "./preload/managers/BrowserViewManagerPreload";
+import type { VolumePopupAnchor } from "./main/managers/VolumePopupManager";
 import "./preload/theme";
 
 const viewManager = new BrowserViewManagerPreload();
@@ -23,7 +24,8 @@ type Channel =
   | "BROWSER_VIEW_MEDIA_PAUSED"
   | "BROWSER_VIEW_NEW_TAB"
   | "BROWSER_VIEW_CLOSE_TAB"
-  | "PLAYER_REMOTE_ENABLED";
+  | "PLAYER_REMOTE_ENABLED"
+  | "VOLUME_POPUP_VOLUME";
 
 const validChannels: Channel[] = [
   "ERROR",
@@ -44,6 +46,7 @@ const validChannels: Channel[] = [
   "BROWSER_VIEW_NEW_TAB",
   "BROWSER_VIEW_CLOSE_TAB",
   "PLAYER_REMOTE_ENABLED",
+  "VOLUME_POPUP_VOLUME",
 ];
 
 // Capture audio when new views are loaded
@@ -152,6 +155,15 @@ const api = {
   },
   setMuted: (id: number, muted: boolean) => {
     ipcRenderer.send("AUDIO_CAPTURE_SET_MUTED", id, muted);
+  },
+  setVolume: (id: number, volume: number) => {
+    ipcRenderer.send("AUDIO_CAPTURE_SET_VOLUME", id, volume);
+  },
+  showVolumePopup: (id: number, volume: number, anchor: VolumePopupAnchor) => {
+    ipcRenderer.send("VOLUME_POPUP_SHOW", id, volume, anchor);
+  },
+  leaveVolumePopup: () => {
+    ipcRenderer.send("VOLUME_POPUP_LEAVE");
   },
   startExternalAudioCapture: (deviceId: string) => {
     ipcRenderer.send("AUDIO_CAPTURE_START_EXTERNAL_AUDIO_CAPTURE", deviceId);

@@ -8,16 +8,16 @@ import IconButton from "@mui/material/IconButton";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import { v4 as uuid } from "uuid";
 
 import { useDispatch, useSelector } from "react-redux";
 import { type RootState } from "../../app/store";
 import { addBookmark, removeBookmark } from "../bookmarks/bookmarksSlice";
-import { setMuted } from "../player/playerSlice";
+import { setTabMuted, setTabVolume } from "./tabAudio";
 import { safeURL } from "./Tabs";
-import { Tab, editTab, removeTab, selectTab } from "./tabsSlice";
+import { Tab, removeTab, selectTab } from "./tabsSlice";
 
 type TabType = {
   tab: Tab;
@@ -34,6 +34,8 @@ export function TabItem({ tab, selected, allowClose, shadow }: TabType) {
   );
   const dispatch = useDispatch();
 
+  const volumeIconHoveredRef = useRef(false);
+
   const isBookmarked = Object.values(bookmarks).filter((bookmark) => {
     return bookmark.url === tab.url;
   });
@@ -44,6 +46,49 @@ export function TabItem({ tab, selected, allowClose, shadow }: TabType) {
   const shownIcons =
     Number(showBookmark) + Number(showClose) + Number(showMedia);
 
+  const volume = tab.volume ?? 1;
+  const isMuted = tab.muted || volume === 0;
+
+  // The icon can disappear under the pointer (media stopped, tab closed) without a mouseleave
+  useEffect(() => {
+    if (!showMedia && volumeIconHoveredRef.current) {
+      volumeIconHoveredRef.current = false;
+      window.kenku.leaveVolumePopup();
+    }
+  }, [showMedia]);
+  useEffect(
+    () => () => {
+      if (volumeIconHoveredRef.current) {
+        window.kenku.leaveVolumePopup();
+      }
+    },
+    [],
+  );
+
+  function showVolumePopup(element: HTMLElement, shownVolume: number) {
+    const rect = element.getBoundingClientRect();
+    window.kenku.showVolumePopup(tab.id, shownVolume, {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+    });
+  }
+
+  function handleVolumeIconClick(event: React.MouseEvent<HTMLElement>) {
+    let shownVolume = 0;
+    if (isMuted) {
+      setTabMuted(dispatch, playerTabId, tab.id, false);
+      shownVolume = volume === 0 ? 1 : volume;
+      if (volume === 0) {
+        setTabVolume(dispatch, playerTabId, tab.id, 1);
+      }
+    } else {
+      setTabMuted(dispatch, playerTabId, tab.id, true);
+    }
+    showVolumePopup(event.currentTarget, shownVolume);
+  }
+
   return (
     <ListItem
       secondaryAction={
@@ -51,19 +96,19 @@ export function TabItem({ tab, selected, allowClose, shadow }: TabType) {
           {showMedia && (
             <IconButton
               edge="end"
-              aria-label={tab.muted ? "unmute" : "mute"}
+              aria-label={isMuted ? "unmute" : "mute"}
               size="small"
-              onClick={() => {
-                const muted = !tab.muted;
-                window.kenku.setMuted(tab.id, muted);
-                if (tab.id === playerTabId) {
-                  dispatch(setMuted(muted));
-                } else {
-                  dispatch(editTab({ id: tab.id, muted }));
-                }
+              onClick={handleVolumeIconClick}
+              onMouseEnter={(e) => {
+                volumeIconHoveredRef.current = true;
+                showVolumePopup(e.currentTarget, isMuted ? 0 : volume);
+              }}
+              onMouseLeave={() => {
+                volumeIconHoveredRef.current = false;
+                window.kenku.leaveVolumePopup();
               }}
             >
-              {tab.muted ? (
+              {isMuted ? (
                 <VolumeOffIcon sx={{ fontSize: "1rem" }} />
               ) : (
                 <VolumeIcon sx={{ fontSize: "1rem" }} />

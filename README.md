@@ -26,6 +26,10 @@ This is an unofficial fork of [owlbear-rodeo/kenku-fm](https://github.com/owlbea
   - If the selected file is missing or invalid, Kenku falls back to its original colours and switches back once the file is fixed. Invalid files are greyed out in the selector.
   - An **Open Theme Folder** button opens the folder in your file manager.
 - **Desktop theme integration.** Because themes reload live, a tool that regenerates a theme file when your desktop palette changes (for example a [Noctalia](https://docs.noctalia.dev) template) keeps Kenku in sync with the rest of your desktop.
+- **Ad and tracker blocking** for pages opened in Kenku's browser tabs.
+- **Add Bookmark button.** The **+** next to **Bookmarks** adds a bookmark by URL.
+- **Per-tab volume.** Hover a tab's speaker icon for a volume slider; clicking the icon still mutes.
+- **Track and playlist copy/paste.** Copy a track and paste it into another playlist, duplicate a playlist, copy a track's file path or link, and show a local track in your file manager or open a web track in your browser.
 
 ### Theme file format
 

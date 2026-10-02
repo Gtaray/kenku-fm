@@ -16,6 +16,7 @@ import { runAutoUpdate } from "./autoUpdate";
 import { getSavedBounds, saveWindowBounds } from "./bounds";
 import { ThemeManager } from "./main/theme/ThemeManager";
 import { PipewireManager } from "./main/pipewire/PipewireManager";
+import { enableAdBlocker } from "./main/adBlocker";
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -130,6 +131,7 @@ if (!hasSingleInstanceLock) {
     window = createWindow();
 
     spoofUserAgent();
+    enableAdBlocker();
 
     if (hasWidevineError) {
       window.once("ready-to-show", () => {
