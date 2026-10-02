@@ -31,6 +31,8 @@ This is an unofficial fork of [owlbear-rodeo/kenku-fm](https://github.com/owlbea
 - **Per-tab volume.** Hover a tab's speaker icon for a volume slider; clicking the icon still mutes.
 - **Track and playlist copy/paste.** Copy a track and paste it into another playlist, duplicate a playlist, copy a track's file path or link, and show a local track in your file manager or open a web track in your browser.
 
+Ad blocking, bookmarks, per-tab volume and copy/paste are ported from [Soteyl/better-kenku-fm](https://github.com/Soteyl/better-kenku-fm).
+
 ### Theme file format
 
 ```json
